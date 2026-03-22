@@ -1,9 +1,9 @@
 {
   "name": "sounddocks",
   "version": "1.0.0",
-  "description": "A clean sounddocks app for Discord via Voicemeeter",
-  "main": "main.js",
+  "description": "A clean soundboard app for Discord via VB-Cable",
   "author": "Resona",
+  "main": "main.js",
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder --win"

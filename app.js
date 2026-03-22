@@ -40,14 +40,17 @@ function saveState() {
   ipcRenderer.send('save-config', { sounds, discordOutputId, monitorOutputId, volume: masterVolume })
 }
 
+
+
 // ── Audio Devices ─────────────────────────────────────────────────
-function isVoicemeeterMain(label) {
+function isCableInput(label) {
   const l = label.toLowerCase()
-  return l.includes('voicemeeter') && !l.includes('aux')
+  return l.includes('cable input') || l.includes('vb-audio virtual cable')
 }
 
-function isVoicemeeterAny(label) {
-  return label.toLowerCase().includes('voicemeeter')
+function isCableOrVirtual(label) {
+  const l = label.toLowerCase()
+  return l.includes('cable') || l.includes('voicemeeter') || l.includes('vb-audio')
 }
 
 async function loadAudioDevices() {
@@ -68,31 +71,32 @@ async function loadAudioDevices() {
     return
   }
 
-  const vmMain = outputs.find(d => isVoicemeeterMain(d.label || ''))
+  const cableDevice = outputs.find(d => isCableInput(d.label || ''))
 
   discordSel.innerHTML = ''
-  if (vmMain) {
-    discordSel.appendChild(new Option('Voicemeeter Input ✓', vmMain.deviceId))
+  if (cableDevice) {
+    discordSel.appendChild(new Option('CABLE Input (VB-Audio) ✓', cableDevice.deviceId))
     if (!discordOutputId) {
-      discordOutputId = vmMain.deviceId
+      discordOutputId = cableDevice.deviceId
       saveState()
     }
   } else {
-    discordSel.appendChild(new Option('— Install Voicemeeter Banana first —', ''))
+    discordSel.appendChild(new Option('— Install VB-Cable first —', ''))
     outputs.forEach(d => {
       discordSel.appendChild(new Option(d.label || 'Unknown device', d.deviceId))
     })
   }
 
+  // Monitor: only real output devices, no virtual cables
   monitorSel.innerHTML = '<option value="">None</option>'
   outputs
-    .filter(d => !isVoicemeeterAny(d.label || ''))
+    .filter(d => !isCableOrVirtual(d.label || ''))
     .forEach(d => {
       monitorSel.appendChild(new Option(d.label || 'Unknown device', d.deviceId))
     })
 
   const hint = document.getElementById('vm-hint')
-  if (hint) hint.style.display = vmMain ? 'block' : 'none'
+  if (hint) hint.style.display = cableDevice ? 'block' : 'none'
 }
 
 // ── Playback ──────────────────────────────────────────────────────

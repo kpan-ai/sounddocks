@@ -6,64 +6,56 @@ A clean soundboard app for PC that integrates with Discord. Play sounds in voice
 
 ## What you need
 
-- **Voicemeeter Banana** (free) — [download here](https://vb-audio.com/Voicemeeter/banana.htm)
+- **VB-Cable** (free) — [download here](https://vb-audio.com/Cable/)
 
-That's it. Just install Voicemeeter and then run the Sounddocks setup file.
+That's it. No Voicemeeter needed.
 
 ---
 
 ## Setup
 
-### 1. Install Voicemeeter Banana
-1. Download and install Voicemeeter Banana
-2. **Restart your PC** — this is required, don't skip it
+### 1. Install VB-Cable
+1. Download and install VB-Cable
+2. **Restart your PC** after installing
 
-### 2. Configure Voicemeeter Banana
-Open Voicemeeter Banana. You'll see a row of strips across the top.
+### 2. Set CABLE Output as your default mic
+1. Right-click the speaker icon in your taskbar → **Sound settings**
+2. Scroll down to **Input**
+3. Set the default input device to **CABLE Output (VB-Audio Virtual Cable)**
 
-**Set your microphone:**
-- Look at the **Stereo Input 1** strip on the far left
-- Click the label at the top of that strip
-- Select your microphone from the list
+### 3. Route your real mic into the cable
+This lets Discord hear your real mic through the cable alongside the soundboard.
 
-**Set your headphones:**
-- In the top right corner find the **HARDWARE OUT** section
-- Click **A1** and select your headphones or speakers
+1. Open **Sound settings** → scroll down and click **More sound settings**
+2. Go to the **Recording** tab
+3. Right-click your **real microphone** → **Properties**
+4. Go to the **Listen** tab
+5. Check **Listen to this device**
+6. Set **Playback through this device** to **CABLE Input (VB-Audio Virtual Cable)**
+7. Click OK
 
-**Route audio so Discord hears everything:**
+Now your real mic feeds into the cable, so Discord hears both your voice and the soundboard.
 
-On the **Stereo Input 1** strip (your mic):
-- Click **A1** so it lights up green → you hear yourself
-- Click **B1** so it lights up green → Discord hears your mic
-
-On the **Voicemeeter Input** strip (in the Virtual Inputs section, middle of the screen):
-- Click **A1** so it lights up green → you hear the sounds
-- Click **B1** so it lights up green → Discord hears the sounds
-
-> B1 is what sends audio to Discord. If B1 is not lit on a strip, Discord won't hear it.
-
-### 3. Configure Discord
+### 4. Configure Discord
 1. Open Discord → Settings → Voice & Video
-2. Set **Input Device** to **Voicemeeter Output**
+2. Set **Input Device** to **CABLE Output (VB-Audio Virtual Cable)**
 
-Your friends will now hear both your mic and any sounds you play at the same time.
-
-### 4. Install Sounddocks
+### 5. Install Sounddocks
 Run **Sounddocks Setup.exe** and install it. You'll get a desktop shortcut.
 
-> Windows may show a "Windows protected your PC" warning. Click **More info** then **Run anyway**. This is normal for apps without a paid certificate.
+> Windows may show a "Windows protected your PC" warning. Click **More info** then **Run anyway**. This is normal.
 
 ---
 
 ## Using the app
 
 ### First launch
-- **Discord output** — automatically set to Voicemeeter Input for you
-- **Monitor** — set this to your headphones so you can also hear the sounds
+- **Discord output** — automatically set to CABLE Input for you
+- **Monitor** — set this to your headphones so you can also hear the sounds yourself
 
 ### Adding sounds
 - Click **+ Add sounds** to import MP3, WAV, OGG, or FLAC files from your PC
-- Click **⬇ MyInstants** to import any sound from [myinstants.com](https://myinstants.com) — just paste the page URL and hit import
+- Click **⬇ MyInstants** to import any sound from [myinstants.com](https://myinstants.com) — paste the page URL and hit import
 
 ### Playing sounds
 - Click any sound card to play it — click it again to stop
@@ -81,14 +73,13 @@ Run **Sounddocks Setup.exe** and install it. You'll get a desktop shortcut.
 ## Troubleshooting
 
 **Discord can't hear the sounds**
-- Make sure **B1 is lit green** on the Voicemeeter Input strip in Voicemeeter Banana
-- Make sure Discord Input Device is set to **Voicemeeter Output**
+- Make sure Discord Input Device is set to **CABLE Output**
+- Make sure the app's Discord output is set to **CABLE Input ✓**
 
 **My mic isn't coming through**
-- Make sure **B1 is lit green** on the Stereo Input 1 strip in Voicemeeter Banana
+- Make sure you enabled **Listen to this device** on your real mic and set playback to **CABLE Input**
 
 **I can't hear the sounds myself**
-- Make sure **A1 is lit green** on the Voicemeeter Input strip
 - Set the **Monitor** dropdown in Sounddocks to your headphones
 
 **Hotkeys aren't working**
