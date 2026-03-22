@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sounddocks — Soundboard for Discord</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0c0c10;
+      --bg1: #13131a;
+      --bg2: #1a1a24;
+      --border: #2a2a38;
+      --accent: #7c5cfc;
+      --accent2: #a78bfa;
+      --text0: #f0eff8;
+      --text1: #a8a6be;
+      --text2: #5a5870;
+      --green: #3ecf8e;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text0);
+      font-family: 'Syne', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 48px;
+      background: rgba(12,12,16,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-family: 'DM Mono', monospace;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--accent2);
+      letter-spacing: 0.1em;
+      text-decoration: none;
+    }
+
+    .nav-links { display: flex; gap: 32px; }
+    .nav-links a {
+      font-size: 13px;
+      color: var(--text1);
+      text-decoration: none;
+      transition: color 0.15s;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+    .nav-links a:hover { color: var(--text0); }
+
+    /* ── Hero ── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(124,92,252,0.15) 0%, transparent 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -60%);
+      pointer-events: none;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(124,92,252,0.12);
+      border: 1px solid rgba(124,92,252,0.3);
+      border-radius: 100px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent2);
+      letter-spacing: 0.08em;
+      margin-bottom: 28px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .hero h1 {
+      font-size: clamp(52px, 8vw, 96px);
+      font-weight: 800;
+      line-height: 1.0;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #f0eff8 30%, #7c5cfc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: clamp(16px, 2.5vw, 20px);
+      color: var(--text1);
+      max-width: 480px;
+      margin-bottom: 44px;
+      font-weight: 400;
+    }
+
+    .hero-btns {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn-download {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      color: white;
+      text-decoration: none;
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn-download:hover { background: var(--accent2); transform: translateY(-1px); }
+
+    .btn-github {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      color: var(--text1);
+      text-decoration: none;
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      transition: border-color 0.15s, color 0.15s, transform 0.1s;
+    }
+    .btn-github:hover { border-color: var(--accent); color: var(--text0); transform: translateY(-1px); }
+
+    .hero-note {
+      margin-top: 20px;
+      font-size: 12px;
+      color: var(--text2);
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* ── Features ── */
+    .section {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 100px 24px;
+    }
+
+    .section-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      color: var(--accent);
+      margin-bottom: 14px;
+    }
+
+    .section-title {
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 48px;
+      line-height: 1.1;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .feature-card {
+      background: var(--bg1);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .feature-card:hover { border-color: rgba(124,92,252,0.4); transform: translateY(-2px); }
+
+    .feature-icon {
+      font-size: 28px;
+      margin-bottom: 14px;
+      display: block;
+    }
+
+    .feature-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text0);
+    }
+
+    .feature-desc {
+      font-size: 14px;
+      color: var(--text1);
+      line-height: 1.6;
+      font-weight: 400;
+    }
+
+    /* ── Setup ── */
+    .setup-section {
+      background: var(--bg1);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .step {
+      display: flex;
+      gap: 24px;
+      padding: 28px 0;
+      border-bottom: 1px solid var(--border);
+      align-items: flex-start;
+    }
+    .step:last-child { border-bottom: none; }
+
+    .step-num {
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--accent);
+      background: rgba(124,92,252,0.1);
+      border: 1px solid rgba(124,92,252,0.25);
+      border-radius: 8px;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .step-content { flex: 1; }
+
+    .step-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text0);
+    }
+
+    .step-desc {
+      font-size: 14px;
+      color: var(--text1);
+      line-height: 1.7;
+      font-weight: 400;
+    }
+
+    .step-desc code {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      padding: 2px 7px;
+      border-radius: 4px;
+      color: var(--accent2);
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 48px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text2);
+      font-size: 13px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    footer a { color: var(--accent2); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero-badge { animation: fadeUp 0.5s ease both; }
+    .hero h1    { animation: fadeUp 0.5s 0.1s ease both; }
+    .hero-sub   { animation: fadeUp 0.5s 0.2s ease both; }
+    .hero-btns  { animation: fadeUp 0.5s 0.3s ease both; }
+    .hero-note  { animation: fadeUp 0.5s 0.4s ease both; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="#">▣ SOUNDDOCKS</a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#setup">Setup</a>
+    <a href="https://github.com/kpan-ai/sounddocks">GitHub</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-badge">▣ Free & Open Source</div>
+  <h1>Sounddocks</h1>
+  <p class="hero-sub">A clean soundboard for PC. Play sounds in Discord voice calls with hotkeys, import from MyInstants, and never touch Voicemeeter.</p>
+  <div class="hero-btns">
+    <a class="btn-download" href="https://github.com/kpan-ai/sounddocks/releases/latest/download/Sounddocks.Setup.exe">
+      ⬇ Download for Windows
+    </a>
+    <a class="btn-github" href="https://github.com/kpan-ai/sounddocks">
+      ◈ View on GitHub
+    </a>
+  </div>
+  <p class="hero-note">Requires VB-Cable (free) · Windows 10/11</p>
+</section>
+
+<!-- Features -->
+<section class="section" id="features">
+  <div class="section-label">FEATURES</div>
+  <h2 class="section-title">Everything you need,<br>nothing you don't</h2>
+  <div class="features-grid">
+    <div class="feature-card">
+      <span class="feature-icon">⌨</span>
+      <div class="feature-title">Global hotkeys</div>
+      <div class="feature-desc">Bind any key combo to a sound. Hotkeys fire even when the app is minimized or in the background.</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">⬇</span>
+      <div class="feature-title">MyInstants import</div>
+      <div class="feature-desc">Paste any myinstants.com URL and the sound downloads and appears in your board instantly.</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🎚</span>
+      <div class="feature-title">Dual audio output</div>
+      <div class="feature-desc">Route sounds to Discord and your headphones separately. You hear everything, your friends hear everything.</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">💾</span>
+      <div class="feature-title">Auto-saves everything</div>
+      <div class="feature-desc">Your sounds, hotkeys, and settings are saved automatically. Pick up right where you left off.</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🎵</span>
+      <div class="feature-title">Any audio format</div>
+      <div class="feature-desc">Import MP3, WAV, OGG, FLAC and more. Just drag your files in or use the file picker.</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">◈</span>
+      <div class="feature-title">Clean dark UI</div>
+      <div class="feature-desc">A minimal, distraction-free interface. Rename sounds, change emojis, search your library.</div>
+    </div>
+  </div>
+</section>
+
+<!-- Setup -->
+<section class="setup-section" id="setup">
+  <div class="section" style="padding-top:80px;padding-bottom:80px">
+    <div class="section-label">SETUP</div>
+    <h2 class="section-title">Up and running<br>in 5 minutes</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <div class="step-title">Install VB-Cable</div>
+          <div class="step-desc">Download and install <a href="https://vb-audio.com/Cable/" style="color:var(--accent2)">VB-Cable</a> (free). Restart your PC after installing.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <div class="step-title">Set CABLE Output as default mic</div>
+          <div class="step-desc">Right-click the speaker icon → Sound settings → Input → set default to <code>CABLE Output (VB-Audio Virtual Cable)</code>.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <div class="step-title">Route your real mic into the cable</div>
+          <div class="step-desc">Sound settings → More sound settings → Recording tab → right-click your real mic → Properties → Listen tab → check <code>Listen to this device</code> → set playback to <code>CABLE Input</code>.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <div class="step-title">Set Discord input to CABLE Output</div>
+          <div class="step-desc">Discord → Settings → Voice & Video → Input Device → <code>CABLE Output (VB-Audio Virtual Cable)</code>.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <div class="step-title">Install Sounddocks and you're done</div>
+          <div class="step-desc">Run the installer. The app auto-detects CABLE Input and sets itself up. Add sounds, set hotkeys, play.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>Made by <a href="https://github.com/kpan-ai">Resona</a> · <a href="https://github.com/kpan-ai/sounddocks">GitHub</a> · Free forever</p>
+</footer>
+
+</body>
+</html>
