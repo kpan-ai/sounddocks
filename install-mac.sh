@@ -56,12 +56,11 @@ fi
 echo "→ Installing BlackHole 2ch..."
 brew install --cask blackhole-2ch 2>&1 | tail -3
 echo "✓ BlackHole 2ch ready"
-echo "→ Restarting audio daemon..."
+echo ""
+echo "→ Restarting audio daemon so BlackHole registers..."
 sudo launchctl kickstart -k system/com.apple.audio.coreaudiod 2>/dev/null || true
-sleep 3
-echo "✓ Audio daemon restarted"
-sleep 3
-echo "✓ Audio daemon restarted"
+sleep 6
+echo "✓ Audio daemon ready"
 echo ""
 
 # ─── 5. Create Aggregate Device using Swift Core Audio ────────────────────────
