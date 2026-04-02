@@ -1,86 +1,108 @@
 # 🎵 Sounddocks
 
-A clean soundboard app for PC that integrates with Discord. Play sounds in voice calls with hotkeys, import directly from MyInstants, and manage your library with a simple dark UI.
+A clean soundboard app for PC and Mac that integrates with Discord. Play sounds in voice calls with hotkeys, import directly from MyInstants, and manage your library with a simple dark UI.
 
 ---
 
-## What you need
+## Windows setup
 
+### What you need
 - **VB-Cable** (free) — [download here](https://vb-audio.com/Cable/)
 
-That's it. No Voicemeeter needed.
+### 1. Install VB-Cable
+Download and install VB-Cable, then **restart your PC**.
+
+### 2. Set CABLE Output as your default mic
+1. Right-click the speaker icon → Sound settings
+2. Scroll to Input → set default to **CABLE Output (VB-Audio Virtual Cable)**
+
+### 3. Route your real mic into the cable
+1. Sound settings → More sound settings → Recording tab
+2. Right-click your real mic → Properties → Listen tab
+3. Check **Listen to this device**
+4. Set playback to **CABLE Input (VB-Audio Virtual Cable)**
+5. Click OK
+
+### 4. Set Discord input
+Discord → Settings → Voice & Video → Input Device → **CABLE Output**
+
+### 5. Install Sounddocks
+Run **Sounddocks Setup.exe**. The app auto-detects CABLE Input.
+
+> Windows may show a SmartScreen warning — click **More info → Run anyway**.
 
 ---
 
-## Setup
+## Mac setup
 
-### 1. Install VB-Cable
-1. Download and install VB-Cable
-2. **Restart your PC** after installing
+### 1. Install BlackHole (virtual audio driver)
+Run this in Terminal:
+```
+curl -s https://raw.githubusercontent.com/kpan-ai/sounddocks/main/install-mac.sh | bash
+```
 
-### 2. Set CABLE Output as your default mic
-1. Right-click the speaker icon in your taskbar → **Sound settings**
-2. Scroll down to **Input**
-3. Set the default input device to **CABLE Output (VB-Audio Virtual Cable)**
+### 2. Set up Audio MIDI Setup (opens automatically)
+- Click **+** → **Create Multi-Output Device**
+  - Check **BlackHole 2ch** + your headphones
+- Click **+** → **Create Aggregate Device**
+  - Check **BlackHole 2ch** + your microphone
 
-### 3. Route your real mic into the cable
-This lets Discord hear your real mic through the cable alongside the soundboard.
+### 3. Set Discord input
+Discord → Settings → Voice & Video → Input Device → **Aggregate Device**
 
-1. Open **Sound settings** → scroll down and click **More sound settings**
-2. Go to the **Recording** tab
-3. Right-click your **real microphone** → **Properties**
-4. Go to the **Listen** tab
-5. Check **Listen to this device**
-6. Set **Playback through this device** to **CABLE Input (VB-Audio Virtual Cable)**
-7. Click OK
+### 4. Install Sounddocks
+Download and open **Sounddocks-arm64.dmg** (Apple Silicon) or **Sounddocks.dmg** (Intel).
 
-Now your real mic feeds into the cable, so Discord hears both your voice and the soundboard.
-
-### 4. Configure Discord
-1. Open Discord → Settings → Voice & Video
-2. Set **Input Device** to **CABLE Output (VB-Audio Virtual Cable)**
-
-### 5. Install Sounddocks
-Run **Sounddocks Setup.exe** and install it. You'll get a desktop shortcut.
-
-> Windows may show a "Windows protected your PC" warning. Click **More info** then **Run anyway**. This is normal.
+### Fix "damaged app" warning
+Mac blocks unsigned apps. Run this after installing:
+```
+xattr -cr /Applications/Sounddocks.app
+```
 
 ---
 
 ## Using the app
 
 ### First launch
-- **Discord output** — automatically set to CABLE Input for you
-- **Monitor** — set this to your headphones so you can also hear the sounds yourself
+- **Discord output** — auto-detected (CABLE Input on Windows, BlackHole on Mac)
+- **Monitor** — set to your headphones so you hear sounds too
 
 ### Adding sounds
-- Click **+ Add sounds** to import MP3, WAV, OGG, or FLAC files from your PC
-- Click **⬇ MyInstants** to import any sound from [myinstants.com](https://myinstants.com) — paste the page URL and hit import
+- Click **+ Add sounds** to import MP3, WAV, OGG, or FLAC files
+- Click **⬇ MyInstants** to import from [myinstants.com](https://myinstants.com) — paste the URL and hit import
 
 ### Playing sounds
-- Click any sound card to play it — click it again to stop
-- Click **■ Stop all** to stop everything at once
+- Click a sound card to play, click again to stop
+- Click **■ Stop all** to stop everything
 
 ### Hotkeys
-- Right-click a sound → **Set hotkey** to bind a key combination
-- Hotkeys work globally even when the app is minimized
+- Right-click a sound → **Set hotkey** to bind a key combo
+- Works globally even when the app is minimized
 
-### Other options
-- Right-click any sound card to rename it or change its emoji
+### Other
+- Right-click any sound card to rename or change emoji
 
 ---
 
 ## Troubleshooting
 
-**Discord can't hear the sounds**
-- Make sure Discord Input Device is set to **CABLE Output**
-- Make sure the app's Discord output is set to **CABLE Input ✓**
+**Discord can't hear sounds (Windows)**
+- Make sure Discord Input Device is **CABLE Output**
+- Make sure the app Discord output shows **CABLE Input ✓**
 
-**My mic isn't coming through**
-- Make sure you enabled **Listen to this device** on your real mic and set playback to **CABLE Input**
+**Discord can't hear sounds (Mac)**
+- Make sure Discord Input Device is **Aggregate Device**
+- Make sure A1 is lit on the BlackHole strip in Audio MIDI Setup
 
-**I can't hear the sounds myself**
-- Set the **Monitor** dropdown in Sounddocks to your headphones
+**Mic not coming through (Windows)**
+- Check Listen to this device is enabled on your real mic
 
-**Hotkeys aren't working**
-- Right-click the Sounddocks shortcut → Run as administrator
+**Mic not coming through (Mac)**
+- Make sure your real mic is checked in the Aggregate Device
+
+**I can't hear sounds myself**
+- Set Monitor dropdown in Sounddocks to your headphones
+
+**Hotkeys not working**
+- Windows: right-click Sounddocks shortcut → Run as administrator
+- Mac: System Preferences → Security & Privacy → Accessibility → enable Sounddocks
