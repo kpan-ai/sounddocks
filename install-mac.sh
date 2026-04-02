@@ -2,7 +2,7 @@
 
 set -e
 
-echo "🎵 Sounddocks — Mac Installer 1"
+echo "🎵 Sounddocks — Mac Installer"
 echo "=============================="
 echo ""
 
@@ -79,8 +79,15 @@ echo ""
 # ─── 5. Auto-create Aggregate Device via Core Audio ──────────────────────────
 echo "→ Restarting audio system to register new driver..."
 sudo kill -9 $(pgrep coreaudiod) 2>/dev/null || true
-sleep 3
-echo "✓ Audio system restarted"
+echo "  Waiting for audio system to come back up..."
+for i in {1..10}; do
+  sleep 2
+  if system_profiler SPAudioDataType &>/dev/null; then
+    echo "✓ Audio system ready"
+    break
+  fi
+  echo "  Still waiting... ($((i*2))s)"
+done
 echo ""
 echo "→ Creating Aggregate Device (virtual cable + default mic)..."
 
