@@ -231,7 +231,7 @@ echo "    and check BlackHole 2ch + your microphone."
 echo ""
 echo "  Enjoy! 🎧"
 echo ""
-read -p "→ A reboot is required to finish setup. Reboot now? (y/n) " -n 1 -r
+read -p "A reboot is required to finish setup. Reboot now? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
   echo "→ Rebooting..."
