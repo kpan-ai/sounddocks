@@ -27,7 +27,7 @@ else
   fi
 
   echo "→ Installing Sounddocks.app..."
-  MOUNT_POINT=$(hdiutil attach "$TMP_DMG" -nobrowse | grep "^/dev" | tail -1 | awk '{for(i=3;i<=NF;i++) printf "%s ", $i; print ""}' | sed 's/[[:space:]]*$//')
+  MOUNT_POINT=$(hdiutil attach "$TMP_DMG" -nobrowse | tail -1 | sed 's|/dev/[^ ]*[ \t]*[^ ]*[ \t]*||'| sed 's/^[ \t]*//' | sed 's/[ \t]*$//')
   echo "  Mounted at: $MOUNT_POINT"
   APP_PATH=$(find "$MOUNT_POINT" -maxdepth 2 -name "*.app" | head -1)
   if [ -z "$APP_PATH" ]; then
