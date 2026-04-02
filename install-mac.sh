@@ -2,7 +2,7 @@
 
 set -e
 
-echo "🎵 Sounddocks — Mac Installer one"
+echo "🎵 Sounddocks — Mac Installer"
 echo "=============================="
 echo ""
 
@@ -85,106 +85,85 @@ echo ""
 echo "→ Creating Aggregate Device (virtual cable + default mic)..."
 
 python3 - <<'PYEOF'
-import subprocess, json, sys
+import subprocess, json, sys, os
 
-def get_audio_devices():
-    try:
-        result = subprocess.run(
-            ['system_profiler', 'SPAudioDataType', '-json'],
-            capture_output=True, text=True, timeout=15
-        )
-        data = json.loads(result.stdout)
-        devices = []
-        for item in data.get('SPAudioDataType', []):
-            name = item.get('_name', '')
-            if name:
-                devices.append(name)
-        return devices
-    except Exception as e:
-        return []
+def run(cmd):
+    return subprocess.run(cmd, capture_output=True, text=True)
 
-devices = get_audio_devices()
-
-# Find virtual cable device name
-virtual_cable = None
-for d in devices:
-    if any(k in d.lower() for k in ['blackhole', 'black hole']):
-        virtual_cable = d
-        break
-if not virtual_cable:
-    for d in devices:
-        if any(k in d.lower() for k in ['vb-audio', 'vb-cable', 'vbcable', 'vb cable', 'cable input', 'cable output']):
-            virtual_cable = d
-            break
-
-if not virtual_cable:
-    print("  ⚠️  Could not detect virtual audio cable device.")
-    print("     Please reboot and re-run the installer, or create the Aggregate Device manually.")
+# Get all audio devices with their UIDs via system_profiler
+result = run(['system_profiler', 'SPAudioDataType', '-json'])
+try:
+    data = json.loads(result.stdout)
+except:
+    print("  ⚠️  Could not read audio devices.")
     sys.exit(0)
 
-print(f"  Detected virtual cable: {virtual_cable}")
+devices = data.get('SPAudioDataType', [])
+print(f"  Found {len(devices)} audio device(s)")
 
-# Use Audio MIDI Setup's aggdevice command-line tool if available, else osascript
-import os
-aggdevice_tool = '/usr/local/bin/aggdevice'  # may not exist; we'll use osascript
+blackhole_uid = None
+mic_uid = None
 
-script = f'''
-tell application "Audio MIDI Setup"
-    -- aggregate device creation is done via audiomidi framework
-end tell
-'''
+for d in devices:
+    name = d.get('_name', '')
+    uid = d.get('coreaudio_device_uid', '')
+    print(f"  Device: {name} | UID: {uid}")
+    if 'blackhole' in name.lower() or 'black hole' in name.lower():
+        blackhole_uid = uid or name
+    if not mic_uid and any(k in name.lower() for k in ['microphone', 'built-in', 'macbook']):
+        mic_uid = uid or name
 
-# Use pluginkit / coreaudio approach via swift one-liner as most reliable method
+if not blackhole_uid:
+    print("  ⚠️  BlackHole not detected. Please reboot and re-run the installer.")
+    sys.exit(0)
+
+print(f"  BlackHole UID: {blackhole_uid}")
+print(f"  Mic UID: {mic_uid or 'not found, using BlackHole only'}")
+
+# Build sub-device list
+sub_devices = [{"uid": blackhole_uid}]
+if mic_uid:
+    sub_devices.append({"uid": mic_uid})
+
+# Write Swift to create aggregate device using UIDs
+sub_list = "\n".join([f'    [kAudioSubDeviceUIDKey: "{d["uid"]}"],' for d in sub_devices])
+
 swift_code = f"""
 import CoreAudio
 import Foundation
 
-// This creates an aggregate device combining the virtual cable + built-in mic
-var desc = AudioObjectPropertyAddress(
-    mSelector: kAudioHardwarePropertyDevices,
-    mScope: kAudioObjectPropertyScopeGlobal,
-    mElement: kAudioObjectPropertyElementMain
-)
-
-// Aggregate device composition dict
 let uid = "SounddocksAggregateDevice"
 let composition: [String: Any] = [
     kAudioAggregateDeviceUIDKey: uid,
-    kAudioAggregateDeviceNameKey: "Sounddocks Aggregate",
+    kAudioAggregateDeviceNameKey: "Sounddocks Cable",
     kAudioAggregateDeviceIsPrivateKey: false,
-    kAudioAggregateDeviceTapAutoStartKey: false,
     kAudioAggregateDeviceSubDeviceListKey: [
-        [kAudioSubDeviceUIDKey: "{virtual_cable}"],
-    ]
+{sub_list}
+    ] as [[String: Any]]
 ]
 
 var aggDeviceID: AudioDeviceID = 0
 let err = AudioHardwareCreateAggregateDevice(composition as CFDictionary, &aggDeviceID)
 if err == noErr {{
-    print("Aggregate device created: \\(aggDeviceID)")
+    print("✓ Aggregate Device created: Sounddocks Cable (id=\\(aggDeviceID))")
+}} else if err == -66748 {{
+    print("✓ Aggregate Device already exists")
 }} else {{
-    print("Note: Aggregate device may already exist or requires manual setup (err: \\(err))")
+    print("⚠️  Could not create Aggregate Device (err=\\(err))")
 }}
 """
 
-# Write and compile swift
 swift_file = '/tmp/create_agg.swift'
 with open(swift_file, 'w') as f:
     f.write(swift_code)
 
-result = subprocess.run(
-    ['swift', swift_file],
-    capture_output=True, text=True, timeout=30
-)
+result = subprocess.run(['swift', swift_file], capture_output=True, text=True, timeout=30)
+print(result.stdout.strip() or result.stderr.strip())
 
-if 'Aggregate device created' in result.stdout:
-    print("✓ Aggregate Device created: 'Sounddocks Aggregate'")
-elif 'already exist' in result.stdout or result.returncode != 0:
-    print("  ℹ️  Aggregate Device may already exist — skipping creation.")
-else:
-    print(f"  Output: {result.stdout.strip() or result.stderr.strip()}")
-
-os.remove(swift_file)
+try:
+    os.remove(swift_file)
+except:
+    pass
 PYEOF
 
 echo ""
@@ -197,7 +176,7 @@ echo "     • Output → your headphones (or speakers)"
 echo ""
 echo "  2. In Discord:"
 echo "     • Settings → Voice & Video"
-echo "     • Input Device → Sounddocks Aggregate"
+echo "     • Input Device → Sounddocks Cable"
 echo ""
 echo "  3. Open Sounddocks — Discord audio will be auto-routed via the virtual cable."
 echo ""
