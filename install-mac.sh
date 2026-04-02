@@ -2,7 +2,7 @@
 
 set -e
 
-echo "🎵 Sounddocks — Mac Installer"
+echo "🎵 Sounddocks — Mac Installer1"
 echo "=============================="
 echo ""
 
@@ -27,7 +27,7 @@ else
   fi
 
   echo "→ Installing Sounddocks.app..."
-  MOUNT_POINT=$(hdiutil attach "$TMP_DMG" -nobrowse | tail -1 | awk -F'\t' '{print $NF}' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+  MOUNT_POINT=$(hdiutil attach "$TMP_DMG" -nobrowse -plist | plutil -extract system-entities xml1 - -o - | grep -A1 'mount-point' | grep '<string>' | sed 's/.*<string>\(.*\)<\/string>.*/\1/' | head -1)
   echo "  Mounted at: $MOUNT_POINT"
   APP_PATH=$(find "$MOUNT_POINT" -maxdepth 2 -name "*.app" | head -1)
   if [ -z "$APP_PATH" ]; then
