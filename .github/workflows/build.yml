@@ -19,14 +19,9 @@ jobs:
         run: npm install
 
       - name: Build Windows installer
-        run: npm run dist
-
-      - name: Upload Windows installer
-        uses: softprops/action-gh-release@v1
-        with:
-          files: dist/*.exe
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run dist
 
   build-mac:
     runs-on: macos-latest
@@ -42,11 +37,6 @@ jobs:
         run: npm install
 
       - name: Build Mac DMG
-        run: npm run dist-mac
-
-      - name: Upload Mac DMG
-        uses: softprops/action-gh-release@v1
-        with:
-          files: dist/*.dmg
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run dist-mac
