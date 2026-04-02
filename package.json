@@ -19,8 +19,9 @@
     "publish": {
       "provider": "github",
       "owner": "kpan-ai",
-      "repo": "sounddocks"
-    },
+      "repo": "sounddocks",
+      "releaseType": "release"
+},
     "win": {
       "target": [
         { "target": "nsis", "arch": ["x64"] }
