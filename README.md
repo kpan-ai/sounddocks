@@ -43,6 +43,7 @@ bash <(curl -s https://raw.githubusercontent.com/kpan-ai/sounddocks/refs/heads/m
 
 ### 2. Restart your Mac
 - once the installation is fininalized an option for restarting is shown. click (y/n)
+- after restarting go back to terminal and run the same cmd. It will create the Sounddocks Cable device
 
 ### 3. Setup Sounddocks
 Sounddocks → Input Device → **Sounddocks Cable**o → Output Device → **Select your speakers**
