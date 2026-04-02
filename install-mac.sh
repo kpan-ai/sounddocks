@@ -2,7 +2,7 @@
 
 set -e
 
-echo "🎵 Sounddocks — Mac Installer One"
+echo "🎵 Sounddocks — Mac Installer"
 echo "=============================="
 echo ""
 
@@ -58,62 +58,128 @@ brew install --cask blackhole-2ch 2>&1 | tail -3
 echo "✓ BlackHole 2ch ready"
 echo ""
 
-# ─── 5. Create Aggregate Device ───────────────────────────────────────────────
+# ─── 5. Create Aggregate Device using Swift Core Audio ────────────────────────
 echo "→ Creating Aggregate Device..."
 
-# Use SwitchAudioSource / AudioDeviceCmdLine if available, otherwise Swift
-# Detect BlackHole UID using ioreg which is more reliable than system_profiler
-BLACKHOLE_UID=$(ioreg -l | grep -i blackhole | grep -i uid | awk -F'"' '{print $4}' | head -1)
-
-# Fallback: use hardcoded known UID pattern for BlackHole 2ch
-if [ -z "$BLACKHOLE_UID" ]; then
-  # BlackHole 2ch always uses this UID format
-  BLACKHOLE_UID="BlackHole2ch_UID"
-  echo "  Using default BlackHole UID"
-else
-  echo "  BlackHole UID: $BLACKHOLE_UID"
-fi
-
-# Get default input device UID
-MIC_UID=$(python3 -c "
-import subprocess
-result = subprocess.run(['system_profiler', 'SPAudioDataType'], capture_output=True, text=True)
-lines = result.stdout.split('\n')
-for i, line in enumerate(lines):
-    if 'Default Input Device: Yes' in line:
-        for j in range(i-10, i):
-            if j >= 0 and 'Unique ID:' in lines[j]:
-                print(lines[j].split('Unique ID:')[1].strip())
-                break
-" 2>/dev/null)
-
-if [ -n "$MIC_UID" ]; then
-  echo "  Mic UID: $MIC_UID"
-else
-  echo "  Could not detect mic UID, will use BlackHole only"
-fi
-
-# Write and run Swift to create the aggregate device
 SWIFT_FILE="/tmp/create_aggregate.swift"
 
-cat > "$SWIFT_FILE" << SWIFTEOF
+cat > "$SWIFT_FILE" << 'SWIFTEOF'
 import CoreAudio
 import Foundation
 
-let aggregateUID = "SounddocksAggregateDevice"
-let blackholeUID = "${BLACKHOLE_UID}"
-let micUID = "${MIC_UID}"
+func getAllDevices() -> [AudioDeviceID] {
+    var propAddr = AudioObjectPropertyAddress(
+        mSelector: kAudioHardwarePropertyDevices,
+        mScope: kAudioObjectPropertyScopeGlobal,
+        mElement: kAudioObjectPropertyElementMain
+    )
+    var dataSize: UInt32 = 0
+    AudioObjectGetPropertyDataSize(AudioObjectID(kAudioObjectSystemObject), &propAddr, 0, nil, &dataSize)
+    let count = Int(dataSize) / MemoryLayout<AudioDeviceID>.size
+    var devices = [AudioDeviceID](repeating: 0, count: count)
+    AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &propAddr, 0, nil, &dataSize, &devices)
+    return devices
+}
 
-var subDevices: [[String: Any]] = [
-    [kAudioSubDeviceUIDKey: blackholeUID]
-]
+func getDeviceName(_ id: AudioDeviceID) -> String {
+    var propAddr = AudioObjectPropertyAddress(
+        mSelector: kAudioDevicePropertyDeviceNameCFString,
+        mScope: kAudioObjectPropertyScopeGlobal,
+        mElement: kAudioObjectPropertyElementMain
+    )
+    var name: CFString = "" as CFString
+    var size = UInt32(MemoryLayout<CFString>.size)
+    AudioObjectGetPropertyData(id, &propAddr, 0, nil, &size, &name)
+    return name as String
+}
 
-if !micUID.isEmpty {
-    subDevices.append([kAudioSubDeviceUIDKey: micUID])
+func getDeviceUID(_ id: AudioDeviceID) -> String {
+    var propAddr = AudioObjectPropertyAddress(
+        mSelector: kAudioDevicePropertyDeviceUID,
+        mScope: kAudioObjectPropertyScopeGlobal,
+        mElement: kAudioObjectPropertyElementMain
+    )
+    var uid: CFString = "" as CFString
+    var size = UInt32(MemoryLayout<CFString>.size)
+    AudioObjectGetPropertyData(id, &propAddr, 0, nil, &size, &uid)
+    return uid as String
+}
+
+func hasInputChannels(_ id: AudioDeviceID) -> Bool {
+    var propAddr = AudioObjectPropertyAddress(
+        mSelector: kAudioDevicePropertyStreamConfiguration,
+        mScope: kAudioDevicePropertyScopeInput,
+        mElement: kAudioObjectPropertyElementMain
+    )
+    var size: UInt32 = 0
+    let err = AudioObjectGetPropertyDataSize(id, &propAddr, 0, nil, &size)
+    if err != noErr || size == 0 { return false }
+    let bufferList = UnsafeMutablePointer<AudioBufferList>.allocate(capacity: Int(size))
+    defer { bufferList.deallocate() }
+    AudioObjectGetPropertyData(id, &propAddr, 0, nil, &size, bufferList)
+    return bufferList.pointee.mNumberBuffers > 0
+}
+
+func getDefaultInputDevice() -> AudioDeviceID {
+    var propAddr = AudioObjectPropertyAddress(
+        mSelector: kAudioHardwarePropertyDefaultInputDevice,
+        mScope: kAudioObjectPropertyScopeGlobal,
+        mElement: kAudioObjectPropertyElementMain
+    )
+    var deviceID: AudioDeviceID = 0
+    var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+    AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &propAddr, 0, nil, &size, &deviceID)
+    return deviceID
+}
+
+let allDevices = getAllDevices()
+var blackholeUID: String? = nil
+var micUID: String? = nil
+
+print("  Scanning audio devices...")
+for id in allDevices {
+    let name = getDeviceName(id)
+    let uid = getDeviceUID(id)
+    print("  · \(name)")
+    if name.lowercased().contains("blackhole") {
+        blackholeUID = uid
+    }
+}
+
+let defaultInputID = getDefaultInputDevice()
+let defaultName = getDeviceName(defaultInputID)
+let defaultUID = getDeviceUID(defaultInputID)
+
+if !defaultName.lowercased().contains("blackhole") && hasInputChannels(defaultInputID) {
+    micUID = defaultUID
+    print("  · Mic: \(defaultName)")
+} else {
+    for id in allDevices {
+        let name = getDeviceName(id)
+        let uid = getDeviceUID(id)
+        if !name.lowercased().contains("blackhole") && hasInputChannels(id) {
+            micUID = uid
+            print("  · Mic: \(name)")
+            break
+        }
+    }
+}
+
+guard let bhUID = blackholeUID else {
+    print("✕ BlackHole not found in device list. Please reboot and try again.")
+    exit(1)
+}
+
+print("  BlackHole UID: \(bhUID)")
+if let mUID = micUID { print("  Mic UID: \(mUID)") }
+
+var subDevices: [[String: Any]] = [[kAudioSubDeviceUIDKey: bhUID]]
+if let mUID = micUID {
+    subDevices.append([kAudioSubDeviceUIDKey: mUID])
 }
 
 let description: [String: Any] = [
-    kAudioAggregateDeviceUIDKey: aggregateUID,
+    kAudioAggregateDeviceUIDKey: "SounddocksAggregateDevice",
     kAudioAggregateDeviceNameKey: "Sounddocks Cable",
     kAudioAggregateDeviceIsPrivateKey: false,
     kAudioAggregateDeviceSubDeviceListKey: subDevices
@@ -124,16 +190,20 @@ let err = AudioHardwareCreateAggregateDevice(description as CFDictionary, &devic
 
 switch err {
 case noErr:
-    print("✓ Created 'Sounddocks Cable' aggregate device (id=\(deviceID))")
+    print("✓ Created 'Sounddocks Cable' (id=\(deviceID))")
 case -66748:
-    print("✓ Aggregate device already exists")
+    print("✓ 'Sounddocks Cable' already exists")
 default:
     print("⚠️  Could not create aggregate device (err=\(err))")
-    print("   You can create it manually in Audio MIDI Setup")
+    print("   Open Audio MIDI Setup → + → Create Aggregate Device")
+    print("   Check BlackHole 2ch + your microphone")
 }
 SWIFTEOF
 
-swift "$SWIFT_FILE" 2>/dev/null || echo "  ⚠️  Swift failed — create the Aggregate Device manually in Audio MIDI Setup"
+swift "$SWIFT_FILE" 2>/dev/null || {
+  echo "  ⚠️  Swift failed — create Aggregate Device manually in Audio MIDI Setup"
+  echo "     Click + → Create Aggregate Device → check BlackHole 2ch + your mic"
+}
 rm -f "$SWIFT_FILE"
 
 echo ""
@@ -150,8 +220,8 @@ echo "     • Input Device → Sounddocks Cable"
 echo ""
 echo "  3. Open Sounddocks — BlackHole will be auto-detected."
 echo ""
-echo "  If 'Sounddocks Cable' doesn't appear in Discord:"
-echo "  → Open Audio MIDI Setup, click + → Create Aggregate Device"
+echo "  If 'Sounddocks Cable' doesn't appear:"
+echo "  → Open Audio MIDI Setup → + → Create Aggregate Device"
 echo "    and check BlackHole 2ch + your microphone."
 echo ""
 echo "  Enjoy! 🎧"
