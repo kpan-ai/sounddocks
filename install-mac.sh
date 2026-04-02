@@ -2,7 +2,7 @@
 
 set -e
 
-echo "🎵 Sounddocks — Mac Installer One"
+echo "🎵 Sounddocks — Mac Installer"
 echo "=============================="
 echo ""
 
@@ -230,3 +230,12 @@ echo "  → Open Audio MIDI Setup → + → Create Aggregate Device"
 echo "    and check BlackHole 2ch + your microphone."
 echo ""
 echo "  Enjoy! 🎧"
+echo ""
+read -p "→ A reboot is required to finish setup. Reboot now? (y/n) " -n 1 -r
+echo ""
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+  echo "→ Rebooting..."
+  sudo reboot
+else
+  echo "  Please reboot your Mac before using Sounddocks."
+fi
