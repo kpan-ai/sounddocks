@@ -1,5 +1,17 @@
 const { ipcRenderer } = require('electron')
 const path = require('path')
+const os = require('os')
+
+// Hide custom titlebar buttons on Mac — Mac uses native traffic lights
+if (os.platform() === 'darwin') {
+  document.addEventListener('DOMContentLoaded', () => {
+    const controls = document.getElementById('titlebar-controls')
+    if (controls) controls.style.display = 'none'
+    // Add padding so content clears the native traffic lights
+    const titlebar = document.getElementById('titlebar')
+    if (titlebar) titlebar.style.paddingLeft = '80px'
+  })
+}
 
 // ── State ─────────────────────────────────────────────────────────
 let sounds = []
@@ -40,19 +52,17 @@ function saveState() {
   ipcRenderer.send('save-config', { sounds, discordOutputId, monitorOutputId, volume: masterVolume })
 }
 
+
+
 // ── Audio Devices ─────────────────────────────────────────────────
-function isDiscordOutput(label) {
+function isCableInput(label) {
   const l = label.toLowerCase()
-  if (l.includes('cable input') || l.includes('vb-audio virtual cable')) return true
-  if (l.includes('blackhole')) return true
-  return false
+  return l.includes('cable input') || l.includes('vb-audio virtual cable')
 }
 
-function isVirtualDevice(label) {
+function isCableOrVirtual(label) {
   const l = label.toLowerCase()
-  return l.includes('cable') || l.includes('blackhole') ||
-         l.includes('voicemeeter') || l.includes('vb-audio') ||
-         l.includes('aggregate') || l.includes('multi-output')
+  return l.includes('cable') || l.includes('voicemeeter') || l.includes('vb-audio')
 }
 
 async function loadAudioDevices() {
@@ -73,38 +83,32 @@ async function loadAudioDevices() {
     return
   }
 
-  const discordDevice = outputs.find(d => isDiscordOutput(d.label || ''))
-  const isMac = navigator.platform.toLowerCase().includes('mac')
+  const cableDevice = outputs.find(d => isCableInput(d.label || ''))
 
   discordSel.innerHTML = ''
-  if (discordDevice) {
-    const label = discordDevice.label.toLowerCase().includes('blackhole')
-      ? 'BlackHole 2ch ✓'
-      : 'CABLE Input (VB-Audio) ✓'
-    discordSel.appendChild(new Option(label, discordDevice.deviceId))
+  if (cableDevice) {
+    discordSel.appendChild(new Option('CABLE Input (VB-Audio) ✓', cableDevice.deviceId))
     if (!discordOutputId) {
-      discordOutputId = discordDevice.deviceId
+      discordOutputId = cableDevice.deviceId
       saveState()
     }
   } else {
-    const placeholder = isMac
-      ? '— Run install-mac.sh first —'
-      : '— Install VB-Cable first —'
-    discordSel.appendChild(new Option(placeholder, ''))
+    discordSel.appendChild(new Option('— Install VB-Cable first —', ''))
     outputs.forEach(d => {
       discordSel.appendChild(new Option(d.label || 'Unknown device', d.deviceId))
     })
   }
 
+  // Monitor: only real output devices, no virtual cables
   monitorSel.innerHTML = '<option value="">None</option>'
   outputs
-    .filter(d => !isVirtualDevice(d.label || ''))
+    .filter(d => !isCableOrVirtual(d.label || ''))
     .forEach(d => {
       monitorSel.appendChild(new Option(d.label || 'Unknown device', d.deviceId))
     })
 
   const hint = document.getElementById('vm-hint')
-  if (hint) hint.style.display = discordDevice ? 'block' : 'none'
+  if (hint) hint.style.display = cableDevice ? 'block' : 'none'
 }
 
 // ── Playback ──────────────────────────────────────────────────────
