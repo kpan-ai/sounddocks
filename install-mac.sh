@@ -2,7 +2,7 @@
 
 set -e
 
-echo "🎵 Sounddocks — Mac Installer one"
+echo "🎵 Sounddocks — Mac Installer"
 echo "=============================="
 echo ""
 
@@ -53,16 +53,24 @@ echo ""
 if system_profiler SPAudioDataType 2>/dev/null | grep -qi "BlackHole\|Transport: Virtual"; then
   echo "✓ Virtual audio driver already installed"
 else
-  echo "→ Installing BlackHole 2ch..."
-  BH_URL="https://github.com/ExistentialAudio/BlackHole/releases/download/v0.6.0/BlackHole2ch-0.6.0.pkg"
-  TMP_BH="/tmp/BlackHole2ch.pkg"
-  curl -L --progress-bar -o "$TMP_BH" "$BH_URL"
+  echo "→ Installing BlackHole 2ch via Homebrew..."
+
+  # Install Homebrew if not present
+  if ! command -v brew &>/dev/null; then
+    echo "  Installing Homebrew first..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    # Add brew to PATH for Apple Silicon
+    if [ -f "/opt/homebrew/bin/brew" ]; then
+      eval "$(/opt/homebrew/bin/brew shellenv)"
+    fi
+  fi
+
+  brew install --cask blackhole-2ch
   if [ $? -ne 0 ]; then
-    echo "✕ BlackHole download failed. Check your internet connection."
+    echo "✕ BlackHole installation failed."
+    echo "  Try manually: brew install --cask blackhole-2ch"
     exit 1
   fi
-  sudo installer -pkg "$TMP_BH" -target /
-  rm "$TMP_BH"
   echo "✓ BlackHole 2ch installed"
 fi
 
