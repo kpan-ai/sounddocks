@@ -27,8 +27,16 @@ else
   fi
 
   echo "→ Installing Sounddocks.app..."
-  MOUNT_POINT=$(hdiutil attach "$TMP_DMG" -nobrowse -quiet | tail -1 | awk '{print $NF}')
-  cp -R "$MOUNT_POINT/Sounddocks.app" /Applications/
+  MOUNT_POINT=$(hdiutil attach "$TMP_DMG" -nobrowse | grep "^/dev" | tail -1 | awk '{for(i=3;i<=NF;i++) printf "%s ", $i; print ""}' | sed 's/[[:space:]]*$//')
+  echo "  Mounted at: $MOUNT_POINT"
+  APP_PATH=$(find "$MOUNT_POINT" -maxdepth 2 -name "*.app" | head -1)
+  if [ -z "$APP_PATH" ]; then
+    echo "✕ Could not find .app inside DMG. Contents:"
+    ls "$MOUNT_POINT"
+    hdiutil detach "$MOUNT_POINT" -quiet
+    exit 1
+  fi
+  cp -R "$APP_PATH" /Applications/
   hdiutil detach "$MOUNT_POINT" -quiet
   rm "$TMP_DMG"
   echo "✓ Sounddocks installed"
