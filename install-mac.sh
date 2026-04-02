@@ -232,8 +232,8 @@ echo ""
 echo "  Enjoy! 🎧"
 echo ""
 read -p "A reboot is required to finish setup. Reboot now? (y/n) " -n 1 -r
-echo
-echo
+echo ""
+echo ""
 if [[ $REPLY =~ ^[Yy]$ ]]; then
   echo "→ Rebooting..."
   sudo reboot
