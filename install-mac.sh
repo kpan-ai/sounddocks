@@ -2,7 +2,7 @@
 
 set -e
 
-echo "🎵 Sounddocks — Mac Installer"
+echo "🎵 Sounddocks — Mac Installer One"
 echo "=============================="
 echo ""
 
