@@ -2,7 +2,7 @@
 
 set -e
 
-echo "🎵 Sounddocks — Mac Installer"
+echo "🎵 Sounddocks — Mac Installer one"
 echo "=============================="
 echo ""
 
@@ -49,70 +49,21 @@ xattr -cr /Applications/Sounddocks.app 2>/dev/null && echo "✓ Quarantine flag 
 echo ""
 
 # ─── 4. Install VB-Audio Cable (with BlackHole fallback) ──────────────────────
-VB_DRIVER_INSTALLED=false
-
-if system_profiler SPAudioDataType 2>/dev/null | grep -qi "VB-Audio\|VBAudio\|vb-cable\|VB-Cable\|VB Audio\|VB_Audio\|Transport: Virtual"; then
-  echo "✓ VB-Audio Cable is already installed"
-  VB_DRIVER_INSTALLED=true
-elif system_profiler SPAudioDataType 2>/dev/null | grep -qi "BlackHole"; then
-  echo "✓ BlackHole is already installed (will use as virtual cable)"
-  VB_DRIVER_INSTALLED=true
-fi
-
-if [ "$VB_DRIVER_INSTALLED" = false ]; then
-  echo "→ Attempting to install VB-Audio Cable..."
-
-  VB_URL="https://download.vb-audio.com/Download_CABLE/VBCable_MACDriver_Pack108.zip"
-  TMP_ZIP="/tmp/VBCable.zip"
-  TMP_DIR="/tmp/VBCable"
-
-  curl -L --progress-bar -o "$TMP_ZIP" "$VB_URL" 2>/dev/null
-  VB_EXIT=$?
-
-  if [ $VB_EXIT -eq 0 ] && [ -s "$TMP_ZIP" ]; then
-    mkdir -p "$TMP_DIR"
-    unzip -q "$TMP_ZIP" -d "$TMP_DIR"
-    # VB-Audio Mac package is a .dmg inside the zip
-    DMG=$(find "$TMP_DIR" -name "*.dmg" | head -1)
-    if [ -n "$DMG" ]; then
-      VB_MOUNT=$(hdiutil attach "$DMG" -nobrowse | tail -1 | awk -F'\t' '{print $NF}' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
-      PKG=$(find "$VB_MOUNT" -name "*.pkg" | head -1)
-      if [ -n "$PKG" ]; then
-        sudo installer -pkg "$PKG" -target /
-        hdiutil detach "$VB_MOUNT" -quiet
-        rm -rf "$TMP_ZIP" "$TMP_DIR"
-        echo "✓ VB-Audio Cable installed"
-        VB_DRIVER_INSTALLED=true
-      else
-        echo "  No .pkg found in VB-Audio DMG — falling back to BlackHole..."
-        hdiutil detach "$VB_MOUNT" -quiet 2>/dev/null
-        rm -rf "$TMP_ZIP" "$TMP_DIR"
-      fi
-    else
-      echo "  VB-Audio DMG not found in zip — falling back to BlackHole..."
-      rm -rf "$TMP_ZIP" "$TMP_DIR"
-    fi
-  else
-    echo "  VB-Audio download failed — falling back to BlackHole..."
-    rm -f "$TMP_ZIP"
+# ─── 4. Install BlackHole virtual audio driver ────────────────────────────────
+if system_profiler SPAudioDataType 2>/dev/null | grep -qi "BlackHole\|Transport: Virtual"; then
+  echo "✓ Virtual audio driver already installed"
+else
+  echo "→ Installing BlackHole 2ch..."
+  BH_URL="https://github.com/ExistentialAudio/BlackHole/releases/download/v0.6.0/BlackHole2ch-0.6.0.pkg"
+  TMP_BH="/tmp/BlackHole2ch.pkg"
+  curl -L --progress-bar -o "$TMP_BH" "$BH_URL"
+  if [ $? -ne 0 ]; then
+    echo "✕ BlackHole download failed. Check your internet connection."
+    exit 1
   fi
-
-  # Fallback: BlackHole
-  if [ "$VB_DRIVER_INSTALLED" = false ]; then
-    echo "→ Installing BlackHole 2ch..."
-    BH_URL="https://github.com/ExistentialAudio/BlackHole/releases/download/v0.6.0/BlackHole2ch-0.6.0.pkg"
-    TMP_BH="/tmp/BlackHole2ch.pkg"
-    curl -L --progress-bar -o "$TMP_BH" "$BH_URL"
-    if [ $? -ne 0 ]; then
-      echo "✕ BlackHole download failed. Please install a virtual audio cable manually."
-      echo "  → https://github.com/ExistentialAudio/BlackHole"
-      exit 1
-    fi
-    sudo installer -pkg "$TMP_BH" -target /
-    rm "$TMP_BH"
-    echo "✓ BlackHole 2ch installed (as fallback)"
-    VB_DRIVER_INSTALLED=true
-  fi
+  sudo installer -pkg "$TMP_BH" -target /
+  rm "$TMP_BH"
+  echo "✓ BlackHole 2ch installed"
 fi
 
 echo ""
@@ -144,12 +95,12 @@ devices = get_audio_devices()
 # Find virtual cable device name
 virtual_cable = None
 for d in devices:
-    if any(k in d.lower() for k in ['vb-audio', 'vb-cable', 'vbcable', 'vb cable', 'cable input', 'cable output']):
+    if any(k in d.lower() for k in ['blackhole', 'black hole']):
         virtual_cable = d
         break
 if not virtual_cable:
     for d in devices:
-        if 'blackhole' in d.lower():
+        if any(k in d.lower() for k in ['vb-audio', 'vb-cable', 'vbcable', 'vb cable', 'cable input', 'cable output']):
             virtual_cable = d
             break
 
