@@ -40,17 +40,19 @@ function saveState() {
   ipcRenderer.send('save-config', { sounds, discordOutputId, monitorOutputId, volume: masterVolume })
 }
 
-
-
 // ── Audio Devices ─────────────────────────────────────────────────
-function isCableInput(label) {
+function isDiscordOutput(label) {
   const l = label.toLowerCase()
-  return l.includes('cable input') || l.includes('vb-audio virtual cable')
+  if (l.includes('cable input') || l.includes('vb-audio virtual cable')) return true
+  if (l.includes('blackhole')) return true
+  return false
 }
 
-function isCableOrVirtual(label) {
+function isVirtualDevice(label) {
   const l = label.toLowerCase()
-  return l.includes('cable') || l.includes('voicemeeter') || l.includes('vb-audio')
+  return l.includes('cable') || l.includes('blackhole') ||
+         l.includes('voicemeeter') || l.includes('vb-audio') ||
+         l.includes('aggregate') || l.includes('multi-output')
 }
 
 async function loadAudioDevices() {
@@ -71,32 +73,38 @@ async function loadAudioDevices() {
     return
   }
 
-  const cableDevice = outputs.find(d => isCableInput(d.label || ''))
+  const discordDevice = outputs.find(d => isDiscordOutput(d.label || ''))
+  const isMac = navigator.platform.toLowerCase().includes('mac')
 
   discordSel.innerHTML = ''
-  if (cableDevice) {
-    discordSel.appendChild(new Option('CABLE Input (VB-Audio) ✓', cableDevice.deviceId))
+  if (discordDevice) {
+    const label = discordDevice.label.toLowerCase().includes('blackhole')
+      ? 'BlackHole 2ch ✓'
+      : 'CABLE Input (VB-Audio) ✓'
+    discordSel.appendChild(new Option(label, discordDevice.deviceId))
     if (!discordOutputId) {
-      discordOutputId = cableDevice.deviceId
+      discordOutputId = discordDevice.deviceId
       saveState()
     }
   } else {
-    discordSel.appendChild(new Option('— Install VB-Cable first —', ''))
+    const placeholder = isMac
+      ? '— Run install-mac.sh first —'
+      : '— Install VB-Cable first —'
+    discordSel.appendChild(new Option(placeholder, ''))
     outputs.forEach(d => {
       discordSel.appendChild(new Option(d.label || 'Unknown device', d.deviceId))
     })
   }
 
-  // Monitor: only real output devices, no virtual cables
   monitorSel.innerHTML = '<option value="">None</option>'
   outputs
-    .filter(d => !isCableOrVirtual(d.label || ''))
+    .filter(d => !isVirtualDevice(d.label || ''))
     .forEach(d => {
       monitorSel.appendChild(new Option(d.label || 'Unknown device', d.deviceId))
     })
 
   const hint = document.getElementById('vm-hint')
-  if (hint) hint.style.display = cableDevice ? 'block' : 'none'
+  if (hint) hint.style.display = discordDevice ? 'block' : 'none'
 }
 
 // ── Playback ──────────────────────────────────────────────────────
