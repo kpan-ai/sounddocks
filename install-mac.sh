@@ -2,7 +2,7 @@
 
 set -e
 
-echo "🎵 Sounddocks — Mac Installer1"
+echo "🎵 Sounddocks — Mac Installer"
 echo "=============================="
 echo ""
 
@@ -51,7 +51,7 @@ echo ""
 # ─── 4. Install VB-Audio Cable (with BlackHole fallback) ──────────────────────
 VB_DRIVER_INSTALLED=false
 
-if system_profiler SPAudioDataType 2>/dev/null | grep -qi "VB-Audio\|VBAudio\|vb-cable\|VB-Cable"; then
+if system_profiler SPAudioDataType 2>/dev/null | grep -qi "VB-Audio\|VBAudio\|vb-cable\|VB-Cable\|VB Audio"; then
   echo "✓ VB-Audio Cable is already installed"
   VB_DRIVER_INSTALLED=true
 elif system_profiler SPAudioDataType 2>/dev/null | grep -qi "BlackHole"; then
@@ -134,7 +134,7 @@ devices = get_audio_devices()
 # Find virtual cable device name
 virtual_cable = None
 for d in devices:
-    if any(k in d.lower() for k in ['vb-audio', 'vbcable', 'vb cable', 'cable input', 'cable output']):
+    if any(k in d.lower() for k in ['vb-audio', 'vb-cable', 'vbcable', 'vb cable', 'cable input', 'cable output']):
         virtual_cable = d
         break
 if not virtual_cable:
