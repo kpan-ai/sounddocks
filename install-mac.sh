@@ -51,7 +51,7 @@ echo ""
 # ─── 4. Install VB-Audio Cable (with BlackHole fallback) ──────────────────────
 VB_DRIVER_INSTALLED=false
 
-if system_profiler SPAudioDataType 2>/dev/null | grep -qi "VB-Audio\|VBAudio\|vb-cable\|VB-Cable\|VB Audio"; then
+if system_profiler SPAudioDataType 2>/dev/null | grep -qi "VB-Audio\|VBAudio\|vb-cable\|VB-Cable\|VB Audio\|VB_Audio\|Transport: Virtual"; then
   echo "✓ VB-Audio Cable is already installed"
   VB_DRIVER_INSTALLED=true
 elif system_profiler SPAudioDataType 2>/dev/null | grep -qi "BlackHole"; then
@@ -62,7 +62,7 @@ fi
 if [ "$VB_DRIVER_INSTALLED" = false ]; then
   echo "→ Attempting to install VB-Audio Cable..."
 
-  VB_URL="https://download.vb-audio.com/Download_CABLE/VBCable_Driver_Pack43.zip"
+  VB_URL="https://download.vb-audio.com/Download_CABLE/VBCable_MACDriver_Pack108.zip"
   TMP_ZIP="/tmp/VBCable.zip"
   TMP_DIR="/tmp/VBCable"
 
@@ -72,14 +72,24 @@ if [ "$VB_DRIVER_INSTALLED" = false ]; then
   if [ $VB_EXIT -eq 0 ] && [ -s "$TMP_ZIP" ]; then
     mkdir -p "$TMP_DIR"
     unzip -q "$TMP_ZIP" -d "$TMP_DIR"
-    PKG=$(find "$TMP_DIR" -name "*.pkg" | head -1)
-    if [ -n "$PKG" ]; then
-      sudo installer -pkg "$PKG" -target /
-      rm -rf "$TMP_ZIP" "$TMP_DIR"
-      echo "✓ VB-Audio Cable installed"
-      VB_DRIVER_INSTALLED=true
+    # VB-Audio Mac package is a .dmg inside the zip
+    DMG=$(find "$TMP_DIR" -name "*.dmg" | head -1)
+    if [ -n "$DMG" ]; then
+      VB_MOUNT=$(hdiutil attach "$DMG" -nobrowse | tail -1 | awk -F'\t' '{print $NF}' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+      PKG=$(find "$VB_MOUNT" -name "*.pkg" | head -1)
+      if [ -n "$PKG" ]; then
+        sudo installer -pkg "$PKG" -target /
+        hdiutil detach "$VB_MOUNT" -quiet
+        rm -rf "$TMP_ZIP" "$TMP_DIR"
+        echo "✓ VB-Audio Cable installed"
+        VB_DRIVER_INSTALLED=true
+      else
+        echo "  No .pkg found in VB-Audio DMG — falling back to BlackHole..."
+        hdiutil detach "$VB_MOUNT" -quiet 2>/dev/null
+        rm -rf "$TMP_ZIP" "$TMP_DIR"
+      fi
     else
-      echo "  VB-Audio package not found in zip — falling back to BlackHole..."
+      echo "  VB-Audio DMG not found in zip — falling back to BlackHole..."
       rm -rf "$TMP_ZIP" "$TMP_DIR"
     fi
   else
