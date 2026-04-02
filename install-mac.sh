@@ -108,14 +108,17 @@ for d in devices:
     name = d.get('_name', '')
     uid = d.get('coreaudio_device_uid', '')
     print(f"  Device: {name} | UID: {uid}")
-    if 'blackhole' in name.lower() or 'black hole' in name.lower():
-        blackhole_uid = uid or name
+    if any(k in name.lower() for k in ['blackhole', 'black hole', 'blackhole 2ch']):
+        blackhole_uid = uid if uid else 'BlackHole2ch_UID'
     if not mic_uid and any(k in name.lower() for k in ['microphone', 'built-in', 'macbook']):
-        mic_uid = uid or name
+        mic_uid = uid if uid else None
 
+# Fallback: if UID not found but BlackHole 2ch is installed, use its known default UID
 if not blackhole_uid:
-    print("  ⚠️  BlackHole not detected. Please reboot and re-run the installer.")
-    sys.exit(0)
+    result2 = run(['system_profiler', 'SPAudioDataType'])
+    if 'blackhole' in result2.stdout.lower():
+        blackhole_uid = 'BlackHole2ch_UID'
+        print("  BlackHole detected via fallback, using default UID")
 
 print(f"  BlackHole UID: {blackhole_uid}")
 print(f"  Mic UID: {mic_uid or 'not found, using BlackHole only'}")
