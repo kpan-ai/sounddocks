@@ -2,8 +2,8 @@
   "name": "sounddocks",
   "version": "1.0.0",
   "description": "A clean soundboard app for Discord via VB-Cable",
-  "author": "Resona",
   "main": "main.js",
+  "author": "Resona",
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder --win",
@@ -16,17 +16,20 @@
   "build": {
     "appId": "com.sounddocks.app",
     "productName": "Sounddocks",
+    "publish": {
+      "provider": "github",
+      "owner": "kpan-ai",
+      "repo": "sounddocks"
+    },
     "win": {
       "target": [
         { "target": "nsis", "arch": ["x64"] }
-      ],
-      "icon": "assets/icon.ico"
+      ]
     },
     "mac": {
       "target": [
         { "target": "dmg", "arch": ["x64", "arm64"] }
       ],
-      "icon": "assets/icon.icns",
       "category": "public.app-category.music"
     },
     "nsis": {
