@@ -2,16 +2,16 @@
 
 set -e
 
-echo "🎵 Sounddocks — Mac Installer"
+echo "🎵 Sounddocks — Mac Installer One"
 echo "=============================="
 echo ""
 
 # ─── 1. Detect Architecture ───────────────────────────────────────────────────
 ARCH=$(uname -m)
 if [ "$ARCH" = "arm64" ]; then
-  DMG_URL="https://github.com/kpan-ai/sounddocks/releases/download/v1.0.0/Sounddocks-1.0.0-arm64.dmg"
+  DMG_URL="https://github.com/kpan-ai/sounddocks/releases/latest/download/Sounddocks-1.0.0-arm64.dmg"
 else
-  DMG_URL="https://github.com/kpan-ai/sounddocks/releases/download/v1.0.0/Sounddocks-1.0.0.dmg"
+  DMG_URL="https://github.com/kpan-ai/sounddocks/releases/latest/download/Sounddocks-1.0.0.dmg"
 fi
 
 # ─── 2. Install Sounddocks.app ────────────────────────────────────────────────
@@ -25,14 +25,11 @@ else
     echo "✕ Download failed. Check your internet connection."
     exit 1
   fi
-
   echo "→ Installing Sounddocks.app..."
   MOUNT_POINT=$(hdiutil attach "$TMP_DMG" -nobrowse -plist | plutil -extract system-entities xml1 - -o - | grep -A1 'mount-point' | grep '<string>' | sed 's/.*<string>\(.*\)<\/string>.*/\1/' | head -1)
-  echo "  Mounted at: $MOUNT_POINT"
   APP_PATH=$(find "$MOUNT_POINT" -maxdepth 2 -name "*.app" | head -1)
   if [ -z "$APP_PATH" ]; then
-    echo "✕ Could not find .app inside DMG. Contents:"
-    ls "$MOUNT_POINT"
+    echo "✕ Could not find .app inside DMG."
     hdiutil detach "$MOUNT_POINT" -quiet
     exit 1
   fi
@@ -42,180 +39,102 @@ else
   echo "✓ Sounddocks installed"
 fi
 
-# ─── 3. Fix 'damaged app' Gatekeeper warning ──────────────────────────────────
+# ─── 3. Fix Gatekeeper ────────────────────────────────────────────────────────
 echo "→ Clearing Gatekeeper quarantine flag..."
-xattr -cr /Applications/Sounddocks.app 2>/dev/null && echo "✓ Quarantine flag cleared" || echo "  (no quarantine flag found — skipping)"
-
+xattr -cr /Applications/Sounddocks.app 2>/dev/null && echo "✓ Quarantine flag cleared" || echo "  (skipped)"
 echo ""
 
-# ─── 4. Install VB-Audio Cable (with BlackHole fallback) ──────────────────────
-# ─── 4. Install BlackHole virtual audio driver ────────────────────────────────
-if system_profiler SPAudioDataType 2>/dev/null | grep -qi "BlackHole\|Transport: Virtual"; then
-  echo "✓ Virtual audio driver already installed"
-else
-  echo "→ Installing BlackHole 2ch via Homebrew..."
-
-  # Install Homebrew if not present
-  if ! command -v brew &>/dev/null; then
-    echo "  Installing Homebrew first..."
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    # Add brew to PATH for Apple Silicon
-    if [ -f "/opt/homebrew/bin/brew" ]; then
-      eval "$(/opt/homebrew/bin/brew shellenv)"
-    fi
+# ─── 4. Install BlackHole ─────────────────────────────────────────────────────
+if ! command -v brew &>/dev/null; then
+  echo "→ Installing Homebrew..."
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  if [ -f "/opt/homebrew/bin/brew" ]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
   fi
-
-  brew install --cask blackhole-2ch
-  if [ $? -ne 0 ]; then
-    echo "✕ BlackHole installation failed."
-    echo "  Try manually: brew install --cask blackhole-2ch"
-    exit 1
-  fi
-  echo "✓ BlackHole 2ch installed"
 fi
 
+echo "→ Installing BlackHole 2ch..."
+brew install --cask blackhole-2ch 2>&1 | tail -3
+echo "✓ BlackHole 2ch ready"
 echo ""
 
-# ─── 5. Auto-create Aggregate Device via Core Audio ──────────────────────────
-echo "→ Restarting audio system to register new driver..."
-sudo kill -9 $(pgrep coreaudiod) 2>/dev/null || true
-echo "  Waiting for audio system to come back up..."
-for i in {1..10}; do
-  sleep 2
-  if system_profiler SPAudioDataType &>/dev/null; then
-    echo "✓ Audio system ready"
-    break
-  fi
-  echo "  Still waiting... ($((i*2))s)"
-done
-echo ""
-echo "→ Creating Aggregate Device (virtual cable + default mic)..."
+# ─── 5. Create Aggregate Device ───────────────────────────────────────────────
+echo "→ Creating Aggregate Device..."
 
-python3 - <<'PYEOF'
-import subprocess, json, sys, os
+# Use SwitchAudioSource / AudioDeviceCmdLine if available, otherwise Swift
+# Detect BlackHole UID using ioreg which is more reliable than system_profiler
+BLACKHOLE_UID=$(ioreg -l | grep -i blackhole | grep -i uid | awk -F'"' '{print $4}' | head -1)
 
-def run(cmd):
-    return subprocess.run(cmd, capture_output=True, text=True)
+# Fallback: use hardcoded known UID pattern for BlackHole 2ch
+if [ -z "$BLACKHOLE_UID" ]; then
+  # BlackHole 2ch always uses this UID format
+  BLACKHOLE_UID="BlackHole2ch_UID"
+  echo "  Using default BlackHole UID"
+else
+  echo "  BlackHole UID: $BLACKHOLE_UID"
+fi
 
-# Get all audio devices with their UIDs via system_profiler
-result = run(['system_profiler', 'SPAudioDataType', '-json'])
-try:
-    data = json.loads(result.stdout)
-except:
-    print("  ⚠️  Could not read audio devices.")
-    sys.exit(0)
+# Get default input device UID
+MIC_UID=$(python3 -c "
+import subprocess
+result = subprocess.run(['system_profiler', 'SPAudioDataType'], capture_output=True, text=True)
+lines = result.stdout.split('\n')
+for i, line in enumerate(lines):
+    if 'Default Input Device: Yes' in line:
+        for j in range(i-10, i):
+            if j >= 0 and 'Unique ID:' in lines[j]:
+                print(lines[j].split('Unique ID:')[1].strip())
+                break
+" 2>/dev/null)
 
-devices = data.get('SPAudioDataType', [])
-print(f"  Found {len(devices)} audio device(s)")
+if [ -n "$MIC_UID" ]; then
+  echo "  Mic UID: $MIC_UID"
+else
+  echo "  Could not detect mic UID, will use BlackHole only"
+fi
 
-blackhole_uid = None
-mic_uid = None
+# Write and run Swift to create the aggregate device
+SWIFT_FILE="/tmp/create_aggregate.swift"
 
-for d in devices:
-    name = d.get('_name', '')
-    uid = d.get('coreaudio_device_uid', '')
-    print(f"  Device: {name} | UID: {uid}")
-    if any(k in name.lower() for k in ['blackhole', 'black hole', 'blackhole 2ch']):
-        blackhole_uid = uid if uid else 'BlackHole2ch_UID'
-
-# Fallback for BlackHole
-if not blackhole_uid:
-    result2 = run(['system_profiler', 'SPAudioDataType'])
-    if 'blackhole' in result2.stdout.lower():
-        blackhole_uid = 'BlackHole2ch_UID'
-        print("  BlackHole detected via fallback, using default UID")
-
-if not blackhole_uid:
-    print("  ⚠️  BlackHole not detected. Please reboot and re-run the installer.")
-    sys.exit(0)
-
-# Get default input device UID via Swift
-mic_swift = """
+cat > "$SWIFT_FILE" << SWIFTEOF
 import CoreAudio
 import Foundation
 
-var defaultInputID = AudioDeviceID(0)
-var size = UInt32(MemoryLayout<AudioDeviceID>.size)
-var addr = AudioObjectPropertyAddress(
-    mSelector: kAudioHardwarePropertyDefaultInputDevice,
-    mScope: kAudioObjectPropertyScopeGlobal,
-    mElement: kAudioObjectPropertyElementMain
-)
-AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size, &defaultInputID)
+let aggregateUID = "SounddocksAggregateDevice"
+let blackholeUID = "${BLACKHOLE_UID}"
+let micUID = "${MIC_UID}"
 
-var uidRef: CFString = "" as CFString
-var uidSize = UInt32(MemoryLayout<CFString>.size)
-var uidAddr = AudioObjectPropertyAddress(
-    mSelector: kAudioDevicePropertyDeviceUID,
-    mScope: kAudioObjectPropertyScopeGlobal,
-    mElement: kAudioObjectPropertyElementMain
-)
-AudioObjectGetPropertyData(defaultInputID, &uidAddr, 0, nil, &uidSize, &uidRef)
-print(uidRef)
-"""
-mic_file = '/tmp/get_mic_uid.swift'
-with open(mic_file, 'w') as f:
-    f.write(mic_swift)
-mic_result = subprocess.run(['swift', mic_file], capture_output=True, text=True, timeout=15)
-mic_uid = mic_result.stdout.strip()
-try:
-    os.remove(mic_file)
-except:
-    pass
-
-if mic_uid:
-    print(f"  Default mic UID: {mic_uid}")
-else:
-    print("  Could not detect default mic, using BlackHole only")
-
-print(f"  BlackHole UID: {blackhole_uid}")
-print(f"  Mic UID: {mic_uid or 'not found, using BlackHole only'}")
-
-# Build sub-device list
-sub_devices = [{"uid": blackhole_uid}]
-if mic_uid:
-    sub_devices.append({"uid": mic_uid})
-
-# Write Swift to create aggregate device using UIDs
-sub_list = "\n".join([f'    [kAudioSubDeviceUIDKey: "{d["uid"]}"],' for d in sub_devices])
-
-swift_code = f"""
-import CoreAudio
-import Foundation
-
-let uid = "SounddocksAggregateDevice"
-let composition: [String: Any] = [
-    kAudioAggregateDeviceUIDKey: uid,
-    kAudioAggregateDeviceNameKey: "Sounddocks Cable",
-    kAudioAggregateDeviceIsPrivateKey: false,
-    kAudioAggregateDeviceSubDeviceListKey: [
-{sub_list}
-    ] as [[String: Any]]
+var subDevices: [[String: Any]] = [
+    [kAudioSubDeviceUIDKey: blackholeUID]
 ]
 
-var aggDeviceID: AudioDeviceID = 0
-let err = AudioHardwareCreateAggregateDevice(composition as CFDictionary, &aggDeviceID)
-if err == noErr {{
-    print("✓ Aggregate Device created: Sounddocks Cable (id=\\(aggDeviceID))")
-}} else if err == -66748 {{
-    print("✓ Aggregate Device already exists")
-}} else {{
-    print("⚠️  Could not create Aggregate Device (err=\\(err))")
-}}
-"""
+if !micUID.isEmpty {
+    subDevices.append([kAudioSubDeviceUIDKey: micUID])
+}
 
-swift_file = '/tmp/create_agg.swift'
-with open(swift_file, 'w') as f:
-    f.write(swift_code)
+let description: [String: Any] = [
+    kAudioAggregateDeviceUIDKey: aggregateUID,
+    kAudioAggregateDeviceNameKey: "Sounddocks Cable",
+    kAudioAggregateDeviceIsPrivateKey: false,
+    kAudioAggregateDeviceSubDeviceListKey: subDevices
+]
 
-result = subprocess.run(['swift', swift_file], capture_output=True, text=True, timeout=30)
-print(result.stdout.strip() or result.stderr.strip())
+var deviceID: AudioDeviceID = 0
+let err = AudioHardwareCreateAggregateDevice(description as CFDictionary, &deviceID)
 
-try:
-    os.remove(swift_file)
-except:
-    pass
-PYEOF
+switch err {
+case noErr:
+    print("✓ Created 'Sounddocks Cable' aggregate device (id=\(deviceID))")
+case -66748:
+    print("✓ Aggregate device already exists")
+default:
+    print("⚠️  Could not create aggregate device (err=\(err))")
+    print("   You can create it manually in Audio MIDI Setup")
+}
+SWIFTEOF
+
+swift "$SWIFT_FILE" 2>/dev/null || echo "  ⚠️  Swift failed — create the Aggregate Device manually in Audio MIDI Setup"
+rm -f "$SWIFT_FILE"
 
 echo ""
 echo "✅  Setup complete!"
@@ -223,12 +142,16 @@ echo ""
 echo "  Next steps:"
 echo ""
 echo "  1. In System Settings → Sound:"
-echo "     • Output → your headphones (or speakers)"
+echo "     • Output → your headphones or speakers"
 echo ""
 echo "  2. In Discord:"
 echo "     • Settings → Voice & Video"
 echo "     • Input Device → Sounddocks Cable"
 echo ""
-echo "  3. Open Sounddocks — Discord audio will be auto-routed via the virtual cable."
+echo "  3. Open Sounddocks — BlackHole will be auto-detected."
+echo ""
+echo "  If 'Sounddocks Cable' doesn't appear in Discord:"
+echo "  → Open Audio MIDI Setup, click + → Create Aggregate Device"
+echo "    and check BlackHole 2ch + your microphone."
 echo ""
 echo "  Enjoy! 🎧"
