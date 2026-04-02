@@ -23,21 +23,22 @@ function saveConfig(config) {
 }
 
 function createWindow() {
+  const isMac = process.platform === 'darwin'
+
   mainWindow = new BrowserWindow({
     width: 960,
     height: 660,
     minWidth: 720,
     minHeight: 500,
-    frame: false,
+    frame: isMac,
     transparent: false,
     backgroundColor: '#0f0f13',
+    titleBarStyle: isMac ? 'hiddenInset' : 'default',
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      // Allow loading local audio files
       webSecurity: false
-    },
-    icon: path.join(__dirname, 'assets', 'icon.png')
+    }
   })
 
   mainWindow.loadFile('index.html')
