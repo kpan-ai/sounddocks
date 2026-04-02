@@ -2,7 +2,7 @@
 
 set -e
 
-echo "🎵 Sounddocks — Mac Installer one"
+echo "🎵 Sounddocks — Mac Installer 1"
 echo "=============================="
 echo ""
 
@@ -110,15 +110,56 @@ for d in devices:
     print(f"  Device: {name} | UID: {uid}")
     if any(k in name.lower() for k in ['blackhole', 'black hole', 'blackhole 2ch']):
         blackhole_uid = uid if uid else 'BlackHole2ch_UID'
-    if not mic_uid and any(k in name.lower() for k in ['microphone', 'built-in', 'macbook']):
-        mic_uid = uid if uid else None
 
-# Fallback: if UID not found but BlackHole 2ch is installed, use its known default UID
+# Fallback for BlackHole
 if not blackhole_uid:
     result2 = run(['system_profiler', 'SPAudioDataType'])
     if 'blackhole' in result2.stdout.lower():
         blackhole_uid = 'BlackHole2ch_UID'
         print("  BlackHole detected via fallback, using default UID")
+
+if not blackhole_uid:
+    print("  ⚠️  BlackHole not detected. Please reboot and re-run the installer.")
+    sys.exit(0)
+
+# Get default input device UID via Swift
+mic_swift = """
+import CoreAudio
+import Foundation
+
+var defaultInputID = AudioDeviceID(0)
+var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+var addr = AudioObjectPropertyAddress(
+    mSelector: kAudioHardwarePropertyDefaultInputDevice,
+    mScope: kAudioObjectPropertyScopeGlobal,
+    mElement: kAudioObjectPropertyElementMain
+)
+AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size, &defaultInputID)
+
+var uidRef: CFString = "" as CFString
+var uidSize = UInt32(MemoryLayout<CFString>.size)
+var uidAddr = AudioObjectPropertyAddress(
+    mSelector: kAudioDevicePropertyDeviceUID,
+    mScope: kAudioObjectPropertyScopeGlobal,
+    mElement: kAudioObjectPropertyElementMain
+)
+AudioObjectGetPropertyData(defaultInputID, &uidAddr, 0, nil, &uidSize, &uidRef)
+print(uidRef)
+"""
+mic_file = '/tmp/get_mic_uid.swift'
+with open(mic_file, 'w') as f:
+    f.write(mic_swift)
+mic_result = subprocess.run(['swift', mic_file], capture_output=True, text=True, timeout=15)
+mic_uid = mic_result.stdout.strip()
+try:
+    os.remove(mic_file)
+except:
+    pass
+
+if mic_uid:
+    print(f"  Default mic UID: {mic_uid}")
+else:
+    print("  Could not detect default mic, using BlackHole only")
 
 print(f"  BlackHole UID: {blackhole_uid}")
 print(f"  Mic UID: {mic_uid or 'not found, using BlackHole only'}")
