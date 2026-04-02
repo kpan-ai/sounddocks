@@ -35,36 +35,27 @@ Run **Sounddocks Setup.exe**. The app auto-detects CABLE Input.
 
 ## Mac setup
 
-### 1. Install BlackHole (virtual audio driver)
+### 1. Install Sounddocks 
 Run this in Terminal:
 ```
-curl -s https://raw.githubusercontent.com/kpan-ai/sounddocks/main/install-mac.sh | bash
+bash <(curl -s https://raw.githubusercontent.com/kpan-ai/sounddocks/refs/heads/main/install-mac.sh)
 ```
 
-### 2. Set up Audio MIDI Setup (opens automatically)
-- Click **+** → **Create Multi-Output Device**
-  - Check **BlackHole 2ch** + your headphones
-- Click **+** → **Create Aggregate Device**
-  - Check **BlackHole 2ch** + your microphone
+### 2. Restart your Mac
+- once the installation is fininalized an option for restarting is shown. click (y/n)
 
-### 3. Set Discord input
-Discord → Settings → Voice & Video → Input Device → **Aggregate Device**
+### 3. Setup Sounddocks
+Sounddocks → Input Device → **Sounddocks Cable**o → Output Device → **Select your speakers**
 
-### 4. Install Sounddocks
-Download and open **Sounddocks-arm64.dmg** (Apple Silicon) or **Sounddocks.dmg** (Intel).
-
-### Fix "damaged app" warning
-Mac blocks unsigned apps. Run this after installing:
-```
-xattr -cr /Applications/Sounddocks.app
-```
+### 4. Set Discord input
+Discord → Settings → Voice & Video → Input Device → **Sounddocks Cable**
 
 ---
 
 ## Using the app
 
 ### First launch
-- **Discord output** — auto-detected (CABLE Input on Windows, BlackHole on Mac)
+- **Discord output** — auto-detected (CABLE Input on Windows, Sounddocks Cable on Mac)
 - **Monitor** — set to your headphones so you hear sounds too
 
 ### Adding sounds
